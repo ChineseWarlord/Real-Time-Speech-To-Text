@@ -71,8 +71,9 @@ if __name__ == "__main__":
         if (audio_obj.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
             print("Input Device id ", i, " - ", audio_obj.get_device_info_by_host_api_device_index(0, i).get('name'))
             device_id.append(i)
-
-
+            
+    device = int(input("Choose device ID: "))
+    
     # Initialize audio buffer
     audio_buffer = queue.Queue()
     STOP = False
@@ -89,7 +90,7 @@ if __name__ == "__main__":
                         channels=channels, 
                         rate=rate, 
                         input=True,
-                        input_device_index=device_id[4],
+                        input_device_index=device,
                         frames_per_buffer=chunk)
 
     print("Recording!")

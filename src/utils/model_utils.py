@@ -9,7 +9,7 @@ def get_models(models):
         list.append(model)
     return list
 
-def run_model(type: str, models: str, workers: int):
+def run_model(type: str, models: str, workers: int, device:str, compute_type:str):
     if type == "openai":
         try:
             model = whisper.load_model(models)
@@ -18,9 +18,8 @@ def run_model(type: str, models: str, workers: int):
             print("Error occured!")
     elif type == "ctranslate":
         try:
-            model = WhisperModel(
-                models, device="cuda", compute_type="int8_float16", num_workers=workers
-            )
+            model = WhisperModel(models,device=device,compute_type=compute_type,num_workers=workers, download_root="../models/") # GPU ONLY
+            #model = WhisperModel(models,device=device,num_workers=workers, download_root="../models/") # CPU ONLY
             return model
         except:
             print("Error occured!")

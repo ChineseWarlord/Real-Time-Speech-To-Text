@@ -4,8 +4,10 @@ from deep_translator import GoogleTranslator
 from queue import Queue
 
 import speech_recognition as sr
+import translators as ts
 import threading
 import keyboard
+import whisper
 import pyaudio
 import queue
 import time
@@ -43,7 +45,7 @@ def record_audio(data_queue):
         data = audio.get_raw_data()
         data_queue.put(data)
         if keyboard.is_pressed("esc"):
-            print("\n\nExiting!")
+            print("\n\nExiting Recorder Thread")
             sys.exit()
 
     # Create a background thread that will pass the raw audio bytes
@@ -55,7 +57,7 @@ def record_audio(data_queue):
     
 def transcribe_audio(data_queue, source):
     # Parameters used to determine when a phrase is done
-    phrase_timeout = float(0.85)
+    phrase_timeout = float(1)
     phrase_time = None
     last_sample = bytes()
     
@@ -64,11 +66,15 @@ def transcribe_audio(data_queue, source):
     transcript = [""]
     
     # Choose model to run
-    model = model_utils.run_model("ctranslate", id[int(input("\nChoose model: "))], 4)
+    models = whisper.available_models()
+    id = model_utils.get_models(models)
+    model = model_utils.run_model("ctranslate", id[int(input("\nChoose model: "))], 4,"cuda", "float16")
+    #ts.preaccelerate_and_speedtest()
     
     # Initialize subtitle thread and queue
     q = queue.Queue()
-    subtitle_thread = threading.Thread(target=subtitles_utils.show_subtitle,args=(100, 100, q),daemon=True)
+    stop_event = threading.Event()
+    subtitle_thread = threading.Thread(target=subtitles_utils.show_subtitle,args=(100, 100, q, stop_event),daemon=True)
     subtitle_thread.start()
     
     # Clear terminal
@@ -113,7 +119,8 @@ def transcribe_audio(data_queue, source):
                     beam_size=5,
                     word_timestamps=False,
                     task="transcribe",
-                    vad_filter=True
+                    vad_filter=True,
+                    #vad_parameters=dict(min_silence_duration_ms=1000)
                 )
 
                 # If we detected a pause between recordings, add a new item to our transcripion.
@@ -124,35 +131,39 @@ def transcribe_audio(data_queue, source):
                     for segment in segments:
                         transcript.append(segment.text)
                 else:
-                    for segment in segments:
-                        transcript[-1] = segment.text
+                    try:
+                        for segment in segments:
+                            transcript[-1] = segment.text
+                    except Exception as e:
+                        print(f"Error: {e}")
 
                 # Clear terminal to reprint the updated transcription
-                os.system("cls" if os.name == "nt" else "clear")
+                #os.system("cls" if os.name == "nt" else "clear")
                 for line in transcript:
                     trans = GoogleTranslator("ja","en").translate(line)
+                    #trans = ts.translate_text(line,translator="google",from_language="auto",to_language="en")
                     #trans = GoogleTranslator("ja","en").translate_batch(transcript)
                     #print("Transcript:", line)
                     print("Transcript:", trans)
-                    q.put(line)
+                    q.put(trans)
+                transcript.clear()
                 #trans.clear()
                 #print(transcript)
                 
                 # Flush stdout to display text in real-time
-                print("", end="", flush=True)
+                #print("", end="", flush=True)
                 if keyboard.is_pressed("esc"):
                     print("\n\nExiting!")
+                    stop_event.set()
+                    subtitle_thread.join()
                     sys.exit()
 
                 # Infinite loops are bad for processors, must sleep.
-                time.sleep(0.05)
+                #time.sleep(0.05)
         except KeyboardInterrupt:
             print("\nKeyboard interrupt")
             print("Exiting!")
             break
-                
-
-
 
 
 

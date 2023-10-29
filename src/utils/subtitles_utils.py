@@ -22,7 +22,7 @@ def make_window_movable(label, root):
         label.bind('<B1-Motion>', update_position)
     label.bind('<Button-1>', move_window)
 
-def show_subtitle(x, y, q):
+def show_subtitle(x, y, q, stop_event):
     root, label = create_root()
     width = label.winfo_reqwidth() # get the required width of the label
     height = label.winfo_reqheight() # get the required height of the label
@@ -35,17 +35,18 @@ def show_subtitle(x, y, q):
     root.lift() # bring the window to the top
     make_window_movable(label, root)
     
-    while 1:
+    while not stop_event.is_set():
         try:
             text = q.get()
             label.config(text=text)
             if text == "q":
                 break
             root.update()
-        except:
-            print("No subtitles!")
+        except Exception as e:
+            print(f"No subtitles! {e}")
         
     root.destroy()
+    close_app()
 
 def close_app():
     print('Closing subtitler.')
