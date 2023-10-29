@@ -5,7 +5,6 @@ from queue import Queue
 
 import speech_recognition as sr
 import threading
-import threading
 import keyboard
 import pyaudio
 import queue
